@@ -15,9 +15,12 @@ Program reads directory entries, finds a file in current directory based on user
 
 int ask_main_menu_questions();
 int ask_file_process_questions();
-struct movie* process_movie_file(char* filePath);
+struct movie* process_movie_file(const char* filePath);
 void largest_file();
+void smallest_file();
+void file_by_name();
 int is_valid_movie_csv(const char *filename);
+void create_dir_and_files(const char *filename);
 
 struct movie{
     char* name;
@@ -36,29 +39,26 @@ int main (){
         // if 1 process largest file with csv extension whose name starts with prefix movies_
         if (fileProcessAnswer == 1) {
             largest_file();
-            int answer = ask_main_menu_questions();
         }
-        else {
-            break;
-        }
-
         // if 2 find smllest file with csv extension whose name starts with prefix movies_
-
-
+        else if (fileProcessAnswer == 2) {
+            smallest_file();
+        }
         // if 3 ask user to enter name of a file
         // checks if file exists, if none, write error and provide choices again
         // no req for prefix or extension
-
+        else if (fileProcessAnswer == 3) {
+            file_by_name();
+        }
+        answer = ask_main_menu_questions();
     }
-
-    // struct movie* head = processMovieFile(argv[1]);
 
     return 0;
 };
 
 int ask_file_process_questions() {
     int answer;
-    printf("Which file you want to process?\n");
+    printf("\nWhich file you want to process?\n");
     printf("Enter 1 to pick the largest file\n");
     printf("Enter 2 to pick the smallest file\n");
     printf("Enter 3 to specify the name of a file\n\n");
@@ -93,16 +93,18 @@ void largest_file() {
     DIR *dir = opendir(".");
 
     char largestFile[256] = "";
+    // to store file size
     off_t largestSize = 0;
 
     while ((entry = readdir(dir)) != NULL) {
         // skip dirs and make sure .csv
         if (entry->d_type != DT_DIR && is_valid_movie_csv(entry->d_name)) {
-            // get file stats
+            // get file stats and identify largest file
             if (stat(entry->d_name, &fileStat) == 0) {
                 if (fileStat.st_size > largestSize) {
                     largestSize = fileStat.st_size;
                     strncpy(largestFile, entry->d_name, sizeof(largestFile) - 1);
+                    // manually null-terminate
                     largestFile[sizeof(largestFile) - 1] = '\0';
                 }
             }
@@ -110,11 +112,80 @@ void largest_file() {
     }
 
     closedir(dir);
+    create_dir_and_files(largestFile);
 
-    printf("Now processing the chosen file named %s\n", largestFile);
-    struct movie* head = process_movie_file(largestFile);
+}
 
+void smallest_file() {
+    struct dirent *entry;
+    struct stat fileStat;
+
+    // open the current directory
+    DIR *dir = opendir(".");
+
+    char smallestFile[256] = "";
+    // to store file size
+    off_t smallestSize = -1;
+
+    while ((entry = readdir(dir)) != NULL) {
+        // skip dirs and make sure .csv
+        if (entry->d_type != DT_DIR && is_valid_movie_csv(entry->d_name)) {
+            // get file stats and identify smallest file
+            if (smallestSize == -1 || fileStat.st_size < smallestSize) {
+                smallestSize = fileStat.st_size;
+                strncpy(smallestFile, entry->d_name, sizeof(smallestFile) - 1);
+                // manually null-terminate
+                smallestFile[sizeof(smallestFile) - 1] = '\0';
+            }
+        }
+    }
+
+    closedir(dir);
+    create_dir_and_files(smallestFile);
+
+}
+
+void file_by_name() {
+    struct dirent *entry;
+    struct stat fileStat;
+
+    // open the current directory
+    DIR *dir = opendir(".");
+
+    char filename[256];
+    printf("Enter the complete file name: ");
+    scanf("%s", filename);
+
+    // found file flag
+    int file_found = 0;
+
+    while ((entry = readdir(dir)) != NULL) {
+        // compare current entry with input filename
+        if (strcmp(entry->d_name, filename) == 0) {
+            file_found = 1;
+            break; 
+        }
+    }
+
+    closedir(dir);
+
+    if (!file_found) {
+        printf("The file %s was not found. Try again\n", filename);
+        return;
+    }
+
+    // if a valid file is found, process it
+    create_dir_and_files(filename);
+}
+
+void create_dir_and_files(const char *filename) {
+
+    printf("Now processing the chosen file named %s\n", filename);
+    struct movie* head = process_movie_file(filename);
+
+    // random number 0-99999 inclusive
     int random_number = rand() % 100000;
+    // dir name prefix
     char dirName[300] = "bergerst.movies.";
     // append random number to directory name
     sprintf(dirName + strlen(dirName), "%d", random_number);
@@ -122,28 +193,28 @@ void largest_file() {
     // make directory wit rwxr-x--- permissions
     mkdir(dirName, 0750);
 
-    printf("Created directory with name %s.\n\n", dirName);
+    printf("Created directory with name %s\n\n", dirName);
 
     // create a file inside the directory for each year a movie was released
     while (head != NULL) {
+        // string to hold file path
         char filePath[350];
+        // create path
         snprintf(filePath, sizeof(filePath), "%s/%d.txt", dirName, head->year);
 
         // create file with 0640 permissions
         int fd = open(filePath, O_WRONLY | O_CREAT | O_APPEND, 0640);
 
+        // open file to write names to
         FILE *file = fdopen(fd, "a");
 
+        // write movie name to corresponding year file
         fprintf(file, "%s\n", head->name);
+        // close file
         fclose(file);
 
         head = head->next;
     }
-
-}
-
-void create_dir_and_files() {
-
 }
 
 
@@ -164,7 +235,7 @@ int is_valid_movie_csv(const char *filename) {
 /* 
 basic structure for reading csv from provided file for assigment (movies.c) 
 */ 
-struct movie* process_movie_file(char* filePath){
+struct movie* process_movie_file(const char* filePath){
     char *currLine = NULL;
     size_t len = 0;
 
@@ -243,7 +314,7 @@ struct movie* process_movie_file(char* filePath){
     free(currLine);
     // Close the file
     fclose(movieFile);
-    // printf("\nProcessed file %s and parsed data for %d movies\n", filePath, movies);
+
     return head;
 };
 
