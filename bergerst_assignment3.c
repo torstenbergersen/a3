@@ -13,10 +13,10 @@ Program reads directory entries, finds a file in current directory based on user
 #include <dirent.h>
 #include <fcntl.h>
 
-int askMainMenuQuestions();
-int askFileProcessQuestions();
-struct movie* processMovieFile(char* filePath);
-void largestFile();
+int ask_main_menu_questions();
+int ask_file_process_questions();
+struct movie* process_movie_file(char* filePath);
+void largest_file();
 int is_valid_movie_csv(const char *filename);
 
 struct movie{
@@ -29,14 +29,14 @@ struct movie{
 
 int main (){
 
-    int answer = askMainMenuQuestions();
+    int answer = ask_main_menu_questions();
     while (answer == 1) {
-        int fileProcessAnswer = askFileProcessQuestions();
+        int fileProcessAnswer = ask_file_process_questions();
 
         // if 1 process largest file with csv extension whose name starts with prefix movies_
         if (fileProcessAnswer == 1) {
-            largestFile();
-            int answer = askMainMenuQuestions();
+            largest_file();
+            int answer = ask_main_menu_questions();
         }
         else {
             break;
@@ -56,7 +56,7 @@ int main (){
     return 0;
 };
 
-int askFileProcessQuestions() {
+int ask_file_process_questions() {
     int answer;
     printf("Which file you want to process?\n");
     printf("Enter 1 to pick the largest file\n");
@@ -66,13 +66,13 @@ int askFileProcessQuestions() {
     scanf("%d", &answer);
     while (answer < 1 || answer > 3) {
             printf("You entered an incorrect choice. Try again.\n");
-            answer = askFileProcessQuestions();
+            answer = ask_file_process_questions();
         }
     return answer;
 }
 
 
-int askMainMenuQuestions() {
+int ask_main_menu_questions() {
     int answer;
     printf("1. Select file to process\n");
     printf("2. Exit the program\n\n");
@@ -80,12 +80,12 @@ int askMainMenuQuestions() {
     scanf("%d", &answer);
     while (answer < 1 || answer > 2) {
         printf("You entered an incorrect choice. Try again.\n");
-        answer = askMainMenuQuestions();
+        answer = ask_main_menu_questions();
     }
     return answer;
 }
 
-void largestFile() {
+void largest_file() {
     struct dirent *entry;
     struct stat fileStat;
 
@@ -112,7 +112,7 @@ void largestFile() {
     closedir(dir);
 
     printf("Now processing the chosen file named %s\n", largestFile);
-    struct movie* head = processMovieFile(largestFile);
+    struct movie* head = process_movie_file(largestFile);
 
     int random_number = rand() % 100000;
     char dirName[300] = "bergerst.movies.";
@@ -142,6 +142,11 @@ void largestFile() {
 
 }
 
+void create_dir_and_files() {
+
+}
+
+
 
 int is_valid_movie_csv(const char *filename) {
     size_t len = strlen(filename);
@@ -159,7 +164,7 @@ int is_valid_movie_csv(const char *filename) {
 /* 
 basic structure for reading csv from provided file for assigment (movies.c) 
 */ 
-struct movie* processMovieFile(char* filePath){
+struct movie* process_movie_file(char* filePath){
     char *currLine = NULL;
     size_t len = 0;
 
