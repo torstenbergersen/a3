@@ -12,6 +12,8 @@ Program reads directory entries, finds a file in current directory based on user
 #include <unistd.h>
 #include <dirent.h>
 #include <fcntl.h>
+#include <limits.h>
+#include <time.h>
 
 int ask_main_menu_questions();
 int ask_file_process_questions();
@@ -39,18 +41,20 @@ int main (){
         // if 1 process largest file with csv extension whose name starts with prefix movies_
         if (fileProcessAnswer == 1) {
             largest_file();
+            answer = ask_main_menu_questions();
         }
         // if 2 find smllest file with csv extension whose name starts with prefix movies_
         else if (fileProcessAnswer == 2) {
             smallest_file();
+            answer = ask_main_menu_questions();
         }
         // if 3 ask user to enter name of a file
         // checks if file exists, if none, write error and provide choices again
         // no req for prefix or extension
         else if (fileProcessAnswer == 3) {
             file_by_name();
+
         }
-        answer = ask_main_menu_questions();
     }
 
     return 0;
@@ -125,17 +129,19 @@ void smallest_file() {
 
     char smallestFile[256] = "";
     // to store file size
-    off_t smallestSize = -1;
+    off_t smallestSize = LONG_MAX;
 
     while ((entry = readdir(dir)) != NULL) {
         // skip dirs and make sure .csv
         if (entry->d_type != DT_DIR && is_valid_movie_csv(entry->d_name)) {
             // get file stats and identify smallest file
-            if (smallestSize == -1 || fileStat.st_size < smallestSize) {
-                smallestSize = fileStat.st_size;
-                strncpy(smallestFile, entry->d_name, sizeof(smallestFile) - 1);
-                // manually null-terminate
-                smallestFile[sizeof(smallestFile) - 1] = '\0';
+            if (stat(entry->d_name, &fileStat) == 0) {
+                if (fileStat.st_size < smallestSize) {
+                    smallestSize = fileStat.st_size;
+                    strncpy(smallestFile, entry->d_name, sizeof(smallestFile) - 1);
+                    // manually null-terminate
+                    smallestFile[sizeof(smallestFile) - 1] = '\0';
+                }
             }
         }
     }
@@ -182,6 +188,9 @@ void create_dir_and_files(const char *filename) {
 
     printf("Now processing the chosen file named %s\n", filename);
     struct movie* head = process_movie_file(filename);
+
+    // seed random num generator
+    srand(time(NULL));
 
     // random number 0-99999 inclusive
     int random_number = rand() % 100000;
